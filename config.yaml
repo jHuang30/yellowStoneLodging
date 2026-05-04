@@ -31,7 +31,15 @@ windows:
 #   YLGV Grant Village
 #   YLRL Roosevelt Lodge Cabins
 watch:
-  - YLOI
+  - YLOI  # Old Faithful Inn
+  - YLOS  # Old Faithful Snow Lodge
+  - YLOL  # Old Faithful Lodge Cabins
+  - YLLH  # Lake Yellowstone Hotel
+  - YLLL  # Lake Lodge Cabins
+  - YLCL  # Canyon Lodge
+  - YLMH  # Mammoth Hot Springs Hotel
+  - YLGV  # Grant Village
+  - YLRL  # Roosevelt Lodge Cabins
 
 # "any" = alert for any check-in date in the window.
 # Or list specific dates: ["08/01/2026", "08/02/2026"]  (note: response uses MM/DD/YYYY)
