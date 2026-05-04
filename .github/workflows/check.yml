@@ -1,11 +1,13 @@
 name: Check Yellowstone availability
 
 on:
-  schedule:
-    # GitHub cron is best-effort and may be delayed under load. Every 15 min is
-    # the practical floor — anything more frequent gets coalesced.
-    - cron: "*/15 * * * *"
-  workflow_dispatch:  # lets you run it on demand from the Actions tab
+  # Scheduled cron disabled: Cloudflare blocks GitHub-runner IPs for the
+  # Xanterra availability endpoint, so this workflow can't actually fetch
+  # data from CI. Re-enable only if/when we add a proxy that has a
+  # non-blocked egress IP (e.g. a Cloudflare Worker).
+  # schedule:
+  #   - cron: "*/15 * * * *"
+  workflow_dispatch:
 
 concurrency:
   # Skip a scheduled run if the previous one is still going.
