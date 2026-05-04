@@ -1,0 +1,9 @@
+state.json
+secrets.local.yaml
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+monitor.log
+.claude/

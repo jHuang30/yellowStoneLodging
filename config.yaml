@@ -1,0 +1,72 @@
+# Party
+guests:
+  adults: 4
+  children: 2
+  infants: 0
+
+# Stay length
+nights: 2
+
+# Each window = one API call returning `limit` consecutive check-in dates.
+# Date is ISO YYYY-MM-DD; must be in the future per the Xanterra API.
+# (The API itself uses DD-MM-YYYY — we convert internally.)
+windows:
+  - date: "2027-05-01"
+    limit: 31
+  - date: "2027-06-01"
+    limit: 30
+  - date: "2027-07-01"
+    limit: 31
+  - date: "2027-08-01"
+    limit: 31
+
+# Lodges to watch. Codes:
+#   YLOI Old Faithful Inn
+#   YLOS Old Faithful Snow Lodge
+#   YLOL Old Faithful Lodge Cabins
+#   YLLH Lake Yellowstone Hotel
+#   YLLL Lake Lodge Cabins
+#   YLCL Canyon Lodge
+#   YLMH Mammoth Hot Springs Hotel
+#   YLGV Grant Village
+#   YLRL Roosevelt Lodge Cabins
+watch:
+  - YLOI
+
+# "any" = alert for any check-in date in the window.
+# Or list specific dates: ["08/01/2026", "08/02/2026"]  (note: response uses MM/DD/YYYY)
+target_dates: any
+
+# Notification channel: discord | ntfy | pushover | macos | webhook | none
+#
+# discord (free, reliable iOS push via the Discord app):
+#   1. Discord → server you control → channel settings (gear) → Integrations
+#      → Webhooks → New Webhook → Copy Webhook URL
+#   2. Paste it as webhook_url below and switch type to "discord".
+#   3. Make sure the Discord mobile app has notifications enabled for that channel.
+#
+# notify:
+#   type: discord
+#   webhook_url: https://discord.com/api/webhooks/XXXXXXXXXX/YYYYYYYYYY
+
+# ntfy (free, no account, but iOS banner delivery has been flaky for some users):
+#   1. Install the "ntfy" app from the App Store / Play Store
+#   2. Subscribe to a hard-to-guess topic name (anyone who knows the topic
+#      can push to your phone — keep it random)
+#   3. Paste the topic below.
+# Notification channel and any secrets (webhook URLs, tokens) live in
+# secrets.local.yaml — that file is gitignored. See secrets.local.yaml.example.
+notify:
+  type: discord
+
+# pushover (~$5 one-time, polished native iOS UX):
+#   type: pushover
+#   token: <app-token-from-pushover.net>
+#   user:  <your-user-key>
+
+# macOS desktop notification (no phone):
+#   type: macos
+
+# Generic Slack-style webhook (posts {"text": ...}):
+#   type: webhook
+#   webhook_url: https://hooks.slack.com/services/XXX/YYY/ZZZ
