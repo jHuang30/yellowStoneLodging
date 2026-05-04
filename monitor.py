@@ -144,16 +144,6 @@ def webhook_notify(url: str, title: str, body: str) -> None:
     requests.post(url, json={"text": f"*{title}*\n{body}"}, impersonate="chrome120", timeout=10)
 
 
-def ntfy_notify(topic: str, title: str, body: str, server: str = "https://ntfy.sh") -> None:
-    requests.post(
-        f"{server.rstrip('/')}/{topic}",
-        data=body.encode("utf-8"),
-        headers={"Title": title, "Priority": "high", "Tags": "tent,bell"},
-        impersonate="chrome120",
-        timeout=10,
-    )
-
-
 def pushover_notify(token: str, user: str, title: str, body: str) -> None:
     requests.post(
         "https://api.pushover.net/1/messages.json",
@@ -188,8 +178,6 @@ def notify(cfg: dict, title: str, body: str) -> None:
         macos_notify(title, body)
     elif kind == "webhook" and n.get("webhook_url"):
         webhook_notify(n["webhook_url"], title, body)
-    elif kind == "ntfy" and n.get("topic"):
-        ntfy_notify(n["topic"], title, body, n.get("server", "https://ntfy.sh"))
     elif kind == "pushover" and n.get("token") and n.get("user"):
         pushover_notify(n["token"], n["user"], title, body)
     elif kind == "discord" and n.get("webhook_url"):

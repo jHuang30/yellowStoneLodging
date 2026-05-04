@@ -45,7 +45,7 @@ watch:
 # Or list specific dates: ["08/01/2026", "08/02/2026"]  (note: response uses MM/DD/YYYY)
 target_dates: any
 
-# Notification channel: discord | ntfy | pushover | macos | webhook | none
+# Notification channel: discord | pushover | macos | webhook | none
 #
 # discord (free, reliable iOS push via the Discord app):
 #   1. Discord → server you control → channel settings (gear) → Integrations
@@ -57,11 +57,6 @@ target_dates: any
 #   type: discord
 #   webhook_url: https://discord.com/api/webhooks/XXXXXXXXXX/YYYYYYYYYY
 
-# ntfy (free, no account, but iOS banner delivery has been flaky for some users):
-#   1. Install the "ntfy" app from the App Store / Play Store
-#   2. Subscribe to a hard-to-guess topic name (anyone who knows the topic
-#      can push to your phone — keep it random)
-#   3. Paste the topic below.
 # Notification channel and any secrets (webhook URLs, tokens) live in
 # secrets.local.yaml — that file is gitignored. See secrets.local.yaml.example.
 notify:
