@@ -46,29 +46,45 @@ def to_api_date(iso_date: str) -> str:
     return datetime.strptime(iso_date, "%Y-%m-%d").strftime("%d-%m-%Y")
 
 
-# Module-level session lets the Cloudflare clearance cookie persist across
-# windows. Without this, GitHub-runner IPs get 403 on the second request.
 _SESSION = requests.Session()
+_WARMED = False
+
+
+def _warm_session() -> None:
+    """Visit the booking site root once so Cloudflare hands us a clearance
+    cookie before we hit the API. Without this, cloud IPs (GitHub runners)
+    get 403'd on the first API call."""
+    global _WARMED
+    if _WARMED:
+        return
+    _SESSION.get(
+        "https://secure.yellowstonenationalparklodges.com/",
+        headers={
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Upgrade-Insecure-Requests": "1",
+        },
+        impersonate="chrome120",
+        timeout=30,
+    )
+    _WARMED = True
 
 
 def fetch_window(iso_date: str, nights: int, limit: int) -> dict:
     import time
 
+    _warm_session()
     api_date = to_api_date(iso_date)
     params = {"date": api_date, "limit": limit, "nights": nights, "rate_code": "INTERNET"}
-    last_err = None
-    for attempt in range(3):
-        r = _SESSION.get(
-            ENDPOINT, params=params, headers=HEADERS, impersonate="chrome120", timeout=30
-        )
-        if r.status_code == 422:
-            raise ValueError(f"API rejected window date={iso_date} (sent {api_date}): {r.text}")
-        if r.status_code == 200:
-            return r.json().get("availability", {})
-        last_err = f"HTTP {r.status_code}"
-        # 403 from Cloudflare or transient 5xx — back off and retry.
-        time.sleep(2 + attempt * 3)
-    raise RuntimeError(f"giving up on window {iso_date}: {last_err}")
+    r = _SESSION.get(
+        ENDPOINT, params=params, headers=HEADERS, impersonate="chrome120", timeout=30
+    )
+    if r.status_code == 422:
+        raise ValueError(f"API rejected window date={iso_date} (sent {api_date}): {r.text}")
+    if r.status_code != 200:
+        raise RuntimeError(f"window {iso_date} failed: HTTP {r.status_code}")
+    time.sleep(1)  # be polite between windows
+    return r.json().get("availability", {})
 
 
 def availability_for(lodge_data: dict, guests: int) -> tuple[bool, int]:
