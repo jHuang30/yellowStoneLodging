@@ -8,11 +8,11 @@
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/jiehuang/Desktop/yellowStoneLodging/monitor.py</string>
+        <string>/Users/jiehuang/yellowstone-lodging/monitor.py</string>
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/jiehuang/Desktop/yellowStoneLodging</string>
+    <string>/Users/jiehuang/yellowstone-lodging</string>
 
     <key>StartInterval</key>
     <integer>900</integer>
@@ -21,10 +21,10 @@
     <true/>
 
     <key>StandardOutPath</key>
-    <string>/Users/jiehuang/Desktop/yellowStoneLodging/monitor.log</string>
+    <string>/Users/jiehuang/yellowstone-lodging/monitor.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/jiehuang/Desktop/yellowStoneLodging/monitor.log</string>
+    <string>/Users/jiehuang/yellowstone-lodging/monitor.log</string>
 
     <key>EnvironmentVariables</key>
     <dict>
