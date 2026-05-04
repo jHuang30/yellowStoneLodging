@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlencode
@@ -27,6 +28,9 @@ ROOT = Path(__file__).parent
 CONFIG_PATH = ROOT / "config.yaml"
 SECRETS_PATH = ROOT / "secrets.local.yaml"
 STATE_PATH = ROOT / "state.json"
+LOG_PATH = ROOT / "monitor.log"
+LAST_EVENT_PATH = ROOT / ".last_event"
+QUIET_TRUNCATE_SEC = 3600
 
 LODGE_NAMES = {
     "YLOI": "Old Faithful Inn",
@@ -192,6 +196,20 @@ def notify(cfg: dict, title: str, body: str) -> None:
         discord_notify(n["webhook_url"], title, body)
 
 
+def maybe_truncate_log() -> None:
+    """Clear monitor.log if no availability has been seen in QUIET_TRUNCATE_SEC.
+
+    launchd opens StandardOutPath with O_APPEND, so writes always go to the
+    current EOF — truncating from inside the run is safe and this run's output
+    starts at offset 0.
+    """
+    if not LAST_EVENT_PATH.exists():
+        LAST_EVENT_PATH.touch()
+        return
+    if time.time() - LAST_EVENT_PATH.stat().st_mtime > QUIET_TRUNCATE_SEC and LOG_PATH.exists():
+        LOG_PATH.write_text("")
+
+
 def load_state() -> dict:
     if STATE_PATH.exists():
         return json.loads(STATE_PATH.read_text())
@@ -227,6 +245,7 @@ def load_config() -> dict:
 
 
 def main() -> int:
+    maybe_truncate_log()
     cfg = load_config()
     nights = cfg["nights"]
     adults = cfg["guests"]["adults"]
@@ -274,6 +293,8 @@ def main() -> int:
         return 1
 
     save_state(new_state)
+    if any(new_state.values()):
+        LAST_EVENT_PATH.touch()
 
     if new_openings:
         for code, date, max_fit in new_openings:
