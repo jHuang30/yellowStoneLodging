@@ -11,14 +11,12 @@ nights: 1
 # Date is ISO YYYY-MM-DD; must be in the future per the Xanterra API.
 # (The API itself uses DD-MM-YYYY — we convert internally.)
 windows:
-  - date: "2027-05-01"
+  - date: "2027-06-20"
     limit: 31
-  - date: "2027-06-01"
-    limit: 30
-  - date: "2027-07-01"
+  - date: "2027-07-21"
     limit: 31
-  - date: "2027-08-01"
-    limit: 31
+  - date: "2027-08-21"
+    limit: 10
 
 # Lodges to watch. Codes:
 #   YLOI Old Faithful Inn
