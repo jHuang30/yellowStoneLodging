@@ -7,6 +7,10 @@ guests:
 # Stay length
 nights: 1
 
+# Max base nightly price (USD) for a room sized to fit the full party.
+# Lodges with no party-sized room or above this price are skipped.
+max_price: 600
+
 # Each window = one API call returning `limit` consecutive check-in dates.
 # Date is ISO YYYY-MM-DD; must be in the future per the Xanterra API.
 # (The API itself uses DD-MM-YYYY — we convert internally.)

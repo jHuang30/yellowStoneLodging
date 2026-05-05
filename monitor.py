@@ -91,16 +91,17 @@ def fetch_window(iso_date: str, nights: int, limit: int) -> dict:
     return r.json().get("availability", {})
 
 
-def availability_for(lodge_data: dict, guests: int) -> tuple[bool, int]:
-    """Return (any-room-bookable, max_guests_fit) for the lodge.
+def availability_for(lodge_data: dict, guests: int) -> tuple[int, "int | None"]:
+    """Return (max_guests_fit, price_for_party).
 
-    A lodge can still be useful even if no single room fits the full party
-    (6 guests usually means 2 rooms), so we report the largest perGuests
-    bucket that has rooms left.
+    max_guests_fit is the largest perGuests bucket that still has rooms.
+    price_for_party is the base nightly price (USD, no fees) for a room
+    sized to fit the full party, or None if no such room is available.
     """
     if lodge_data.get("status") != "OPEN":
-        return False, 0
+        return 0, None
     best = 0
+    price_for_party: "int | None" = None
     for n_str, info in (lodge_data.get("perGuests") or {}).items():
         if info.get("s") == "closed" or info.get("a", 0) <= 0:
             continue
@@ -110,14 +111,17 @@ def availability_for(lodge_data: dict, guests: int) -> tuple[bool, int]:
             continue
         if n > best:
             best = n
-    fits_party = best >= guests
-    return best > 0, best
+        if n == guests:
+            price_for_party = info.get("b", {}).get("p")
+    return best, price_for_party
 
 
 def booking_link(code: str, response_date: str, nights: int, adults: int, children: int) -> str:
     """Build a flex-search URL. response_date comes in MM/DD/YYYY from the API.
 
-    The booking website's URL format is MM-DD-YYYY (matches what we see in browser).
+    The booking website expects MM-DD-YYYY in `dateFrom`, plus `animals`,
+    `rateCode`, and `rateType` — without them the site silently falls back
+    to a default check-in date.
     """
     web_date = response_date.replace("/", "-")
     params = {
@@ -125,8 +129,11 @@ def booking_link(code: str, response_date: str, nights: int, adults: int, childr
         "adults": adults,
         "children": children,
         "infants": 0,
-        "dateFrom": web_date,
+        "animals": 0,
+        "rateCode": "",
+        "rateType": "",
         "nights": nights,
+        "dateFrom": web_date,
     }
     return f"{BOOKING_URL}?{urlencode(params)}"
 
@@ -240,6 +247,7 @@ def main() -> int:
     children = cfg["guests"]["children"]
     guests = adults + children
     target_dates = cfg.get("target_dates", "any")
+    max_price = cfg.get("max_price")
     watch = set(cfg["watch"])
 
     state = load_state()
@@ -264,14 +272,20 @@ def main() -> int:
                 if data is None:
                     continue
                 key = f"{code}|{date}"
-                available, max_fit = availability_for(data, guests)
-                new_state[key] = available
+                max_fit, price = availability_for(data, guests)
+                fits_party = max_fit >= guests
+                under_budget = price is not None and (max_price is None or price < max_price)
+                qualifies = fits_party and under_budget
+                new_state[key] = qualifies
                 was = state.get(key, False)
-                if available and not was:
-                    new_openings.append((code, date, max_fit))
-                if available:
-                    fits = "fits party" if max_fit >= guests else f"max {max_fit}/room"
-                    marker = f"AVAILABLE ({fits})"
+                if qualifies and not was:
+                    new_openings.append((code, date, max_fit, price))
+                if qualifies:
+                    marker = f"AVAILABLE (fits {max_fit} • ${price})"
+                elif fits_party and price is not None:
+                    marker = f"over budget (${price})"
+                elif max_fit > 0:
+                    marker = f"too small (max {max_fit}/room)"
                 else:
                     marker = "—"
                 name = LODGE_NAMES.get(code, code)
@@ -285,14 +299,13 @@ def main() -> int:
         LAST_EVENT_PATH.touch()
 
     if new_openings:
-        for code, date, max_fit in new_openings:
+        for code, date, max_fit, price in new_openings:
             name = LODGE_NAMES.get(code, code)
             link = booking_link(code, date, nights, adults, children)
-            fits = "fits party" if max_fit >= guests else f"max {max_fit}/room"
             notify(
                 cfg,
                 f"Yellowstone: {name} available",
-                f"{date} • {nights}n • {fits} • {link}",
+                f"{date} • {nights}n • fits {max_fit} • ${price} • {link}",
             )
     else:
         print("\nNo new openings.")
