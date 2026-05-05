@@ -5,7 +5,7 @@ guests:
   infants: 0
 
 # Stay length
-nights: 2
+nights: 1
 
 # Each window = one API call returning `limit` consecutive check-in dates.
 # Date is ISO YYYY-MM-DD; must be in the future per the Xanterra API.
