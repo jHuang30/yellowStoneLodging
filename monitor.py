@@ -243,68 +243,84 @@ def main() -> int:
     maybe_truncate_log()
     cfg = load_config()
     nights = cfg["nights"]
-    adults = cfg["guests"]["adults"]
-    children = cfg["guests"]["children"]
-    guests = adults + children
     target_dates = cfg.get("target_dates", "any")
-    max_price = cfg.get("max_price")
-    watch = set(cfg["watch"])
+    checks = cfg["checks"]
+
+    # Fetch each window once; one response covers all checks since the API
+    # returns every perGuests bucket regardless of party size.
+    fetches = {}
+    for window in cfg["windows"]:
+        try:
+            fetches[window["date"]] = fetch_window(
+                window["date"], nights, window.get("limit", 31)
+            )
+        except Exception as e:
+            print(f"[ERROR] window {window['date']}: {e}")
+
+    if not fetches:
+        return 1
 
     state = load_state()
     new_state = {}
-    new_openings = []
-    any_data = False
+    new_openings = []  # (check_name, code, date, max_fit, price, adults, children)
 
-    for window in cfg["windows"]:
-        try:
-            avail = fetch_window(window["date"], nights, window.get("limit", 31))
-        except Exception as e:
-            print(f"[ERROR] window {window['date']}: {e}")
-            continue
-        any_data = True
+    for check in checks:
+        check_name = check["name"]
+        adults = check["guests"]["adults"]
+        children = check["guests"].get("children", 0)
+        guests = adults + children
+        max_price = check.get("max_price")
+        watch = set(check["watch"])
 
-        for date in sorted(avail.keys()):
-            if target_dates != "any" and date not in target_dates:
+        print(f"\n=== {check_name}  guests={guests}  max_price=${max_price} ===")
+
+        for window in cfg["windows"]:
+            avail = fetches.get(window["date"])
+            if avail is None:
                 continue
-            lodges = avail[date]
-            for code in sorted(watch):
-                data = lodges.get(code)
-                if data is None:
+            for date in sorted(avail.keys()):
+                if target_dates != "any" and date not in target_dates:
                     continue
-                key = f"{code}|{date}"
-                max_fit, price = availability_for(data, guests)
-                fits_party = max_fit >= guests
-                under_budget = price is not None and (max_price is None or price < max_price)
-                qualifies = fits_party and under_budget
-                new_state[key] = qualifies
-                was = state.get(key, False)
-                if qualifies and not was:
-                    new_openings.append((code, date, max_fit, price))
-                if qualifies:
-                    marker = f"AVAILABLE (fits {max_fit} • ${price})"
-                elif fits_party and price is not None:
-                    marker = f"over budget (${price})"
-                elif max_fit > 0:
-                    marker = f"too small (max {max_fit}/room)"
-                else:
-                    marker = "—"
-                name = LODGE_NAMES.get(code, code)
-                print(f"  {date}  {code:<5}  {name:<32} {marker}")
-
-    if not any_data:
-        return 1
+                lodges = avail[date]
+                for code in sorted(watch):
+                    data = lodges.get(code)
+                    if data is None:
+                        continue
+                    key = f"{check_name}|{code}|{date}"
+                    max_fit, price = availability_for(data, guests)
+                    fits_party = max_fit >= guests
+                    under_budget = price is not None and (
+                        max_price is None or price < max_price
+                    )
+                    qualifies = fits_party and under_budget
+                    new_state[key] = qualifies
+                    was = state.get(key, False)
+                    if qualifies and not was:
+                        new_openings.append(
+                            (check_name, code, date, max_fit, price, adults, children)
+                        )
+                    if qualifies:
+                        marker = f"AVAILABLE (fits {max_fit} • ${price})"
+                    elif fits_party and price is not None:
+                        marker = f"over budget (${price})"
+                    elif max_fit > 0:
+                        marker = f"too small (max {max_fit}/room)"
+                    else:
+                        marker = "—"
+                    name = LODGE_NAMES.get(code, code)
+                    print(f"  {date}  {code:<5}  {name:<32} {marker}")
 
     save_state(new_state)
     if any(new_state.values()):
         LAST_EVENT_PATH.touch()
 
     if new_openings:
-        for code, date, max_fit, price in new_openings:
+        for check_name, code, date, max_fit, price, adults, children in new_openings:
             name = LODGE_NAMES.get(code, code)
             link = booking_link(code, date, nights, adults, children)
             notify(
                 cfg,
-                f"Yellowstone: {name} available",
+                f"Yellowstone [{check_name}]: {name}",
                 f"{date} • {nights}n • fits {max_fit} • ${price} • {link}",
             )
     else:
